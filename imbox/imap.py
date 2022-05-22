@@ -8,8 +8,9 @@ logger = logging.getLogger(__name__)
 
 class ImapTransport:
 
-    def __init__(self, hostname, port=None, ssl=True, ssl_context=None, starttls=False):
+    def __init__(self, hostname, port=None, ssl=True, ssl_context=None, starttls=False, vendor="gmail"):
         self.hostname = hostname
+        self.vendor = vendor
 
         if ssl:
             self.port = port or 993
@@ -31,7 +32,20 @@ class ImapTransport:
 
     def connect(self, username, password):
         self.server.login(username, password)
+        if self.vendor == "163":
+            self._add_auth()
         self.server.select()
         logger.debug("Logged into server {} and selected mailbox 'INBOX'"
                      .format(self.hostname))
         return self.server
+
+    def _add_auth(self):
+        args = (
+            "name",
+            "XXXX",
+            "version",
+            "1.0.0",
+            "vendor",
+            "myclient",
+        )
+        self.server.xatom("ID", '("' + '" "'.join(args) + '")')

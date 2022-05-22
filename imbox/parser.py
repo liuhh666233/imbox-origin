@@ -124,6 +124,7 @@ def parse_attachment(message_part):
         ]
 
         if dispositions[0].lower() in ["attachment", "inline"]:
+            attachment_file_name = message_part.get_filename()
             file_data = message_part.get_payload(decode=True)
 
             attachment = {
@@ -132,24 +133,14 @@ def parse_attachment(message_part):
                 'content': io.BytesIO(file_data),
                 'content-id': message_part.get("Content-ID", None)
             }
-            filename_parts = []
-            for param in dispositions[1:]:
-                if param:
-                    name, value = decode_param(param)
+            (decoded_string,charset),*_ = email.header.decode_header(attachment_file_name)
 
-                    # Check for split filename
-                    s_name = name.rstrip('*').split("*")
-                    if s_name[0] == 'filename':
-                        # If this is a split file name - use the number after the * as an index to insert this part
-                        if len(s_name) > 1 and s_name[1] != '':
-                            filename_parts.insert(int(s_name[1]),value[1:-1] if value.startswith('"') else value)
-                        else:
-                            filename_parts.insert(0,value[1:-1] if value.startswith('"') else value)
+            if charset:
+                file_name = decoded_string.decode(charset)
+            else:
+                file_name = decoded_string
 
-                    if 'create-date' in name:
-                        attachment['create-date'] = value
-
-            attachment['filename'] = "".join(filename_parts)
+            attachment['filename'] = file_name
             return attachment
 
     return None
